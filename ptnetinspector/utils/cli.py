@@ -217,7 +217,7 @@ def parse_args() -> argparse.Namespace:
         argparse.Namespace: Object with parsed arguments.
     """
     parser = CustomArgumentParser(description='start ptnetinspector')
-    parser.add_argument("-t", nargs='+', choices=["802.1x", "p", "a", "a+"], help="first mandatory argument")
+    parser.add_argument("-t", nargs='+', choices=["802.1x", "p", "a", "a+", "NULL"], help="first mandatory argument")
     parser.add_argument("-i", dest="interface", help="second mandatory argument")
     parser.add_argument("-j", action="store_true")
     parser.add_argument("-target", dest="targets", nargs="+", action="append", help="target MAC/IP address(es) for results filtering (space-separated; -target can be repeated)")
@@ -396,6 +396,8 @@ def get_help() -> list:
             ["      ptnetinspector -ts TRUNK -i eth0"],
             ["      ptnetinspector -ts 4-INVENTORY -i eth0"],
             ["      ptnetinspector -ts 6-INVENTORY -i eth0"],
+            ["      ptnetinspector -ts 4-LOCAL -i eth0"],
+            ["      ptnetinspector -ts 6-LOCAL -i eth0"],
         ]}
     ]
 
@@ -613,6 +615,7 @@ def _validate_target_codes(target_codes, scan_types, ip_mode, ipv4, ipv6, list_e
             return None
 
         has_eap = False
+        has_null = False
         passive_only = False
         passive_possible = False
         active_only = False
@@ -623,6 +626,8 @@ def _validate_target_codes(target_codes, scan_types, ip_mode, ipv4, ipv6, list_e
         for modes in modes_per_entry:
             if modes == ["802.1x"]:
                 has_eap = True
+            if modes == ["NULL"]:
+                has_null = True
             if modes == ["p"]:
                 passive_only = True
             if "p" in modes:
@@ -640,6 +645,9 @@ def _validate_target_codes(target_codes, scan_types, ip_mode, ipv4, ipv6, list_e
 
         if has_eap:
             inferred_scan_types.append("802.1x")
+
+        if has_null:
+            inferred_scan_types.append("NULL")
 
         # Choose the SINGLE most appropriate mode based on what tests require:
         # Strategy: Prefer the less intrusive mode that can satisfy all selected tests

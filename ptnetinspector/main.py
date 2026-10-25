@@ -420,9 +420,29 @@ def ptnet_aggressive():
         print_message("Reused scan data and performed analysis", condition=True)
 
 
+def ptnet_null():
+    Vulnerability_object.handle_vulnerabilities("NULL")
+    handle_output(
+        "NULL",
+        [],
+        [],
+        json_output,
+        more_detail,
+        less_detail,
+        check_addresses,
+        interface,
+        ip_mode,
+        target_codes,
+        lambda fname: get_csv_path(fname, interface),
+        target_macs,
+        target_ips,
+    )
+
+
 def execute_scan(scan_types):
     global _HOST_STATE_DIRTY
     has_eap = "802.1x" in scan_types
+    has_null = "NULL" in scan_types
     has_passive = "p" in scan_types
     has_active = "a" in scan_types
     has_aggressive = "a+" in scan_types
@@ -433,6 +453,9 @@ def execute_scan(scan_types):
             check_eap_detected()
             if json_output:
                 Json.output_object(False, "802.1x", target_codes=target_codes, ipver=ip_mode, target_macs=target_macs, target_ips=target_ips, check_addresses=check_addresses)
+
+    if has_null:
+        ptnet_null()
 
     if has_passive:
         _HOST_STATE_DIRTY = True
