@@ -398,6 +398,8 @@ def get_help() -> list:
             ["      ptnetinspector -ts 6-INVENTORY -i eth0"],
             ["      ptnetinspector -ts 4-LOCAL -i eth0"],
             ["      ptnetinspector -ts 6-LOCAL -i eth0"],
+            ["      ptnetinspector -ts 4-SNOOPING -i eth0"],
+            ["      ptnetinspector -ts 6-SNOOPING -i eth0"],
         ]}
     ]
 

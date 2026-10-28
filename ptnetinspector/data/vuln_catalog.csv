@@ -70,3 +70,5 @@
 "Node","p","6","PTV-NET-IDENT-6-INVENTORYDEV","Device reveals its IPv6 address and the ports it uses to passive observation","6-INVENTORY","PTL-NET-IDENT-6-INVENTORY"
 "Network","NULL","4","PTV-NET-MISCONF-4-LOCAL","DHCP provides servers on public IPv4 addresses","4-LOCAL","PTL-NET-MISCONF-4-LOCAL"
 "Network","NULL","6","PTV-NET-MISCONF-6-LOCAL","DHCP provides servers on public IPv6 addresses","6-LOCAL","PTL-NET-MISCONF-6-LOCAL"
+"Network","p","4","PTV-NET-MISCONF-4-SNOOPING","Switch delivers IPv4 multicast groups to ports that did not join them","4-SNOOPING","PTL-NET-MISCONF-4-SNOOPING"
+"Network","p","6","PTV-NET-MISCONF-6-SNOOPING","Switch delivers IPv6 multicast groups to ports that did not join them","6-SNOOPING","PTL-NET-MISCONF-6-SNOOPING"
