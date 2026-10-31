@@ -486,7 +486,7 @@ class TestOwnResultLines:
         return re.sub(r'\x1b\[[0-9;]*m', '', buf.getvalue())
 
     def test_result_sentences_follow_the_label(self, output):
-        assert "[✕] 802.1Q tagged frames received, the port behaves as a trunk" in output
+        assert "[✗] 802.1Q tagged frames received, the port behaves as a trunk" in output
         assert "[✓] IPv4 devices NOT observed, the network reveals no addresses" in output
 
     def test_details_and_table_follow_the_sentence(self, output):

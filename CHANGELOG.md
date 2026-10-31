@@ -372,7 +372,8 @@ Version 0.2.4
   and the NULL mode for tests that need no scanning mode
 - Vulnerability codes of these tests follow the `PTV-NET-<TEST>-<TYPE>` pattern
   (e.g. `PTV-NET-TRUNK-MISCONF`, `PTV-NET-INVENTORY-IDENT`)
-- These tests print one result line in the terminal: a status mark (✓, ✕ or ●), a sentence
-  describing the result, optional details and an optional table (devices for INVENTORY,
-  local entries for LOCAL, unjoined groups for SNOOPING). Their codes appear only in JSON,
-  and they are left out of the Vulnerability Summary and Matrix
+- These tests print one result line in the terminal: a ptlibs status mark ([✓] not
+  vulnerable, [✗] vulnerable, [!] cannot be determined), a sentence describing the result,
+  optional details and an optional table (devices for INVENTORY, local entries for LOCAL,
+  unjoined groups for SNOOPING). Their codes appear only in JSON, and they are left out of
+  the Vulnerability Summary and Matrix

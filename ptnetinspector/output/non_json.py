@@ -310,10 +310,8 @@ class Non_json:
         # Print header
         Non_json.print_box("Vulnerability Analysis")
         for result in test_results.values():
-            label = result['label']
-            color = {1: RED, 0: GREEN}.get(label, WHITE)
-            symbol = {1: "✕", 0: "✓"}.get(label, "●")
-            ptprinthelper.ptprint(f"{color}[{symbol}]{END} {result['sentence']}", condition=True, indent=4)
+            bullet_type = {1: "VULN", 0: "NOTVULN"}.get(result['label'], "WARNING")
+            ptprinthelper.ptprint(result['sentence'], bullet_type, condition=True, indent=4)
             for line in result['details']:
                 ptprinthelper.ptprint(line, condition=True, indent=8)
             if result['table']:
