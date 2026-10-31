@@ -365,3 +365,10 @@ Version 0.2.3
 - Purely passive: a port is recorded because a frame carrying it crossed the wire, which is
   an observation, not a port scan, and not a claim that the port is open. The scanner's own
   frames are skipped and a disabled address family (`-4`/`-6`) is ignored
+
+Version 0.2.4
+-------------
+- Added tests TRUNK, 4-/6-INVENTORY, 4-/6-LOCAL and 4-/6-SNOOPING, selectable with `-ts`,
+  and the NULL mode for tests that need no scanning mode
+- Vulnerability codes of these tests follow the `PTV-NET-<TEST>-<TYPE>` pattern
+  (e.g. `PTV-NET-TRUNK-MISCONF`, `PTV-NET-4-INVENTORY-IDENT`)
