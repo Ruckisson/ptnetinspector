@@ -331,8 +331,8 @@ def get_help() -> list:
             ["                ", "      6-SNOOPING            IPv6 multicast delivered to ports that did not join (MLD snooping)"],
             ["                ", "      802-1X                Network does not have 802.1x deployed"],
             ["                ", "   Passive reconnaissance"],
-            ["                ", "      INVENTORY             Devices and ports revealed by passive observation (IP version by -4/-6)"],
-            ["                ", "      LOCAL                 Local information of the tester's host, DHCP servers on public addresses (IP version by -4/-6)"],
+            ["                ", "      INVENTORY             Devices and ports revealed by passive observation (IPv4 and IPv6)"],
+            ["                ", "      LOCAL                 Local information of the tester's host, DHCP servers on public addresses (IPv4 and IPv6)"],
             ["                ", "      6-PREDICT-GLOBIP      Device uses predictable IPv6 global address"],
             ["                ", "      6-PREDICT-LINKLOCALIP Device uses predictable IPv6 link-local address"],
             ["                ", "   Name and service discovery"],
@@ -430,8 +430,8 @@ def get_help() -> list:
             ["      ptnetinspector -ts 6-OUTRANGE -i eth0"],
             ["      ptnetinspector -ts 6-FAKERA -i eth0 -prefix 2000:6675:7272:7900::/64 -dns 2001:4860:4860::8888 (FAKERA requires prefix and DNS)"],
             ["      ptnetinspector -ts TRUNK -i eth0"],
-            ["      ptnetinspector -ts INVENTORY -i eth0 -4 -6"],
-            ["      ptnetinspector -ts LOCAL -i eth0 -4"],
+            ["      ptnetinspector -ts INVENTORY -i eth0"],
+            ["      ptnetinspector -ts LOCAL -i eth0"],
             ["      ptnetinspector -ts 4-SNOOPING -i eth0"],
             ["      ptnetinspector -ts 6-SNOOPING -i eth0"],
         ]}
@@ -724,8 +724,7 @@ def _validate_target_codes(target_codes, scan_types, ip_mode, ipv4, ipv6, list_e
         allowed_ipvers = set()
         for entry in associated_vulns.values():
             ipver = entry.get("IPver", "").strip()
-            if ipver:
-                allowed_ipvers.add(ipver)
+            allowed_ipvers.update(v.strip() for v in ipver.split(",") if v.strip())
 
         # Enable only the IP versions that appear in the selected test codes
         ipv4_enabled = "4" in allowed_ipvers
