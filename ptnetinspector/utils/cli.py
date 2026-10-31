@@ -1249,13 +1249,14 @@ def parameter_control(
     prefix_len = None
     network = None
 
-    if type == ["p"] or ("p" in type and "802.1x" in type):
+    scan_types = [mode for mode in type if mode != "NULL"]
+    if scan_types == ["p"] or ("p" in scan_types and "802.1x" in scan_types):
         duration_passive = _validate_passive_mode(duration_passive, duration_aggressive, prefix, smac, sip, rpref, period, chl, mtu, dns, nofwd, list_error, list_warning)
-    elif type == ["802.1x"]:
+    elif scan_types == ["802.1x"]:
         _validate_802_1x_mode(duration_passive, duration_aggressive, prefix, smac, sip, rpref, period, chl, mtu, dns, nofwd, list_error)
-    elif type == ["a"] or ("a" in type and "802.1x" in type and len(type) == 2):
+    elif scan_types == ["a"] or ("a" in scan_types and "802.1x" in scan_types and len(scan_types) == 2):
         smac, ip_mode = _validate_active_mode(interface, ip_mode, duration_passive, duration_aggressive, prefix, sip, rpref, period, chl, mtu, dns, smac, nofwd, list_error, list_warning)
-    if type == ["a+"] or ("a+" in type and ("802.1x" in type or "a" in type)):
+    if scan_types == ["a+"] or ("a+" in scan_types and ("802.1x" in scan_types or "a" in scan_types)):
         duration_aggressive, prefix_len, network, smac, sip, rpref, period, chl, mtu, dns = _validate_aggressive_mode(
             interface, ip_mode, duration_passive, duration_aggressive, prefix, smac, sip, rpref, period, chl, mtu, dns, nofwd, list_error, list_warning
         )
