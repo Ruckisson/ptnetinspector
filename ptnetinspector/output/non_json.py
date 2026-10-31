@@ -1000,6 +1000,7 @@ class Non_json:
             all_ip = addresses_df['IP'].to_list()
             from ptnetinspector.entities.port import Port
             ports_by_mac = Port.collect_by_mac()
+            own_codes = Non_json._own_codes()
             for index, row in role_node_df.iterrows():
                 mac_address = row['MAC']
                 device_number = row['Device_Number']
@@ -1074,6 +1075,8 @@ class Non_json:
                         device_vulns = device_vulns[device_vulns['Code'].str.upper().isin(target_vuln_codes_set)]
                 for _, vuln_row in device_vulns.iterrows():
                     code = vuln_row.get('Code', '')
+                    if str(code).strip().upper() in own_codes:
+                        continue
                     desc = vuln_row.get('Description', '')
                     ipver_vuln = vuln_row.get('IPver', '')
                     label = normalize_label(vuln_row.get('Label'))

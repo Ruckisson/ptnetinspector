@@ -331,10 +331,8 @@ def get_help() -> list:
             ["                ", "      6-SNOOPING            IPv6 multicast delivered to ports that did not join (MLD snooping)"],
             ["                ", "      802-1X                Network does not have 802.1x deployed"],
             ["                ", "   Passive reconnaissance"],
-            ["                ", "      4-INVENTORY           IPv4 devices and ports revealed by passive observation"],
-            ["                ", "      6-INVENTORY           IPv6 devices and ports revealed by passive observation"],
-            ["                ", "      4-LOCAL               Local IPv4 information of the tester's host, DHCP servers on public addresses"],
-            ["                ", "      6-LOCAL               Local IPv6 information of the tester's host, DHCP servers on public addresses"],
+            ["                ", "      INVENTORY             Devices and ports revealed by passive observation (IP version by -4/-6)"],
+            ["                ", "      LOCAL                 Local information of the tester's host, DHCP servers on public addresses (IP version by -4/-6)"],
             ["                ", "      6-PREDICT-GLOBIP      Device uses predictable IPv6 global address"],
             ["                ", "      6-PREDICT-LINKLOCALIP Device uses predictable IPv6 link-local address"],
             ["                ", "   Name and service discovery"],
@@ -432,10 +430,8 @@ def get_help() -> list:
             ["      ptnetinspector -ts 6-OUTRANGE -i eth0"],
             ["      ptnetinspector -ts 6-FAKERA -i eth0 -prefix 2000:6675:7272:7900::/64 -dns 2001:4860:4860::8888 (FAKERA requires prefix and DNS)"],
             ["      ptnetinspector -ts TRUNK -i eth0"],
-            ["      ptnetinspector -ts 4-INVENTORY -i eth0"],
-            ["      ptnetinspector -ts 6-INVENTORY -i eth0"],
-            ["      ptnetinspector -ts 4-LOCAL -i eth0"],
-            ["      ptnetinspector -ts 6-LOCAL -i eth0"],
+            ["      ptnetinspector -ts INVENTORY -i eth0 -4 -6"],
+            ["      ptnetinspector -ts LOCAL -i eth0 -4"],
             ["      ptnetinspector -ts 4-SNOOPING -i eth0"],
             ["      ptnetinspector -ts 6-SNOOPING -i eth0"],
         ]}
@@ -1249,13 +1245,14 @@ def parameter_control(
     prefix_len = None
     network = None
 
-    if type == ["p"] or ("p" in type and "802.1x" in type):
+    scan_types = [mode for mode in type if mode != "NULL"]
+    if scan_types == ["p"] or ("p" in scan_types and "802.1x" in scan_types):
         duration_passive = _validate_passive_mode(duration_passive, duration_aggressive, prefix, smac, sip, rpref, period, chl, mtu, dns, nofwd, list_error, list_warning)
-    elif type == ["802.1x"]:
+    elif scan_types == ["802.1x"]:
         _validate_802_1x_mode(duration_passive, duration_aggressive, prefix, smac, sip, rpref, period, chl, mtu, dns, nofwd, list_error)
-    elif type == ["a"] or ("a" in type and "802.1x" in type and len(type) == 2):
+    elif scan_types == ["a"] or ("a" in scan_types and "802.1x" in scan_types and len(scan_types) == 2):
         smac, ip_mode = _validate_active_mode(interface, ip_mode, duration_passive, duration_aggressive, prefix, sip, rpref, period, chl, mtu, dns, smac, nofwd, list_error, list_warning)
-    if type == ["a+"] or ("a+" in type and ("802.1x" in type or "a" in type)):
+    if scan_types == ["a+"] or ("a+" in scan_types and ("802.1x" in scan_types or "a" in scan_types)):
         duration_aggressive, prefix_len, network, smac, sip, rpref, period, chl, mtu, dns = _validate_aggressive_mode(
             interface, ip_mode, duration_passive, duration_aggressive, prefix, smac, sip, rpref, period, chl, mtu, dns, nofwd, list_error, list_warning
         )
