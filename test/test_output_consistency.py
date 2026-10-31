@@ -440,3 +440,64 @@ class TestVulnerabilitySortHandlesEveryFileShape:
                'Description': 'a', 'Label': '2'}
         assert [r['Label'] for r in self._run(temp_dir, [row, {**row, 'Label': '1'}])] == ['1']
         assert [r['Label'] for r in self._run(temp_dir, [{**row, 'Label': '1'}, row])] == ['2']
+
+
+class TestOwnResultLines:
+    """Tests with their own result sentences print one line instead of the tables."""
+
+    @pytest.fixture
+    def output(self, temp_dir):
+        import ptnetinspector.output.non_json as NJ
+        import ptnetinspector.utils.csv_helpers as CH
+        import io
+        import contextlib
+        import re
+
+        csv_path = lambda name, iface=None: temp_dir / name
+        with patch('ptnetinspector.utils.path.get_tmp_path', lambda i=None: temp_dir), \
+             patch.object(CH, 'get_tmp_path', lambda i=None: temp_dir):
+            CH.create_csv()
+
+        _write_csv(temp_dir / "vulnerability_net.csv", NET_FIELDS, [
+            {'ID': 'Network', 'Mode': 'p', 'IPver': '', 'Code': 'PTV-NET-TRUNK-MISCONF',
+             'Description': 'Network delivers 802.1Q tagged frames to the port', 'Label': '1'},
+            {'ID': 'Network', 'Mode': 'p', 'IPver': '4', 'Code': 'PTV-NET-4-INVENTORY-IDENT',
+             'Description': 'Network reveals IPv4 devices', 'Label': '0'},
+        ])
+        _write_csv(temp_dir / "vulnerability_mac.csv", MAC_FIELDS, [
+            {'ID': '1', 'MAC': '00:11:22:00:00:01', 'Mode': 'p', 'IPver': '4',
+             'Code': 'PTV-NET-4-INVENTORY-IDENTDEV', 'Description': 'Device reveals its IPv4 address', 'Label': '1'},
+        ])
+        (temp_dir / "test_results.json").write_text(_json.dumps({
+            "TRUNK": {"mode": "p", "label": 1, "sentence": "802.1Q tagged frames received, the port behaves as a trunk",
+                      "details": ["VLAN IDs: 10, 20"], "table": None},
+            "4-INVENTORY": {"mode": "p", "label": 0, "sentence": "IPv4 devices NOT observed, the network reveals no addresses",
+                            "details": [], "table": {"headers": ["Device", "MAC"], "rows": [["1", "00:11:22:00:00:01"]]}},
+            "4-LOCAL": {"mode": "NULL", "label": 2, "sentence": "Printed only in the NULL mode", "details": [], "table": None},
+        }))
+
+        from ptnetinspector.output.non_json import Non_json
+        with patch('ptnetinspector.utils.path.get_tmp_path', lambda i=None: temp_dir), \
+             patch('ptnetinspector.utils.ip_utils.get_csv_path', csv_path), \
+             patch.object(NJ, 'get_csv_path', csv_path):
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                Non_json.read_vulnerability_table("p", IPMode(True, True))
+        return re.sub(r'\x1b\[[0-9;]*m', '', buf.getvalue())
+
+    def test_result_sentences_follow_the_label(self, output):
+        assert "[✕] 802.1Q tagged frames received, the port behaves as a trunk" in output
+        assert "[✓] IPv4 devices NOT observed, the network reveals no addresses" in output
+
+    def test_details_and_table_follow_the_sentence(self, output):
+        assert "VLAN IDs: 10, 20" in output
+        assert "00:11:22:00:00:01" in output
+
+    def test_results_of_other_modes_are_not_printed(self, output):
+        assert "Printed only in the NULL mode" not in output
+
+    def test_no_codes_counters_or_tables(self, output):
+        assert "PTV-" not in output
+        assert "[1/" not in output
+        assert "Vulnerability Summary" not in output
+        assert "Vulnerability Matrix" not in output

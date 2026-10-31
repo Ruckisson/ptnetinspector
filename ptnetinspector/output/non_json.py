@@ -5,6 +5,7 @@ consistent, readable format using the accumulated CSV data.
 """
 import csv
 import ipaddress
+import json
 import logging
 import os
 import shutil
@@ -291,14 +292,36 @@ class Non_json:
                 return f"{WHITE}●{END}"
             return f"{WHITE}●{END}"
 
+        own_codes = Non_json._own_codes()
+        for code in [code for code in vulnerabilities if code in own_codes]:
+            vulnerabilities.pop(code)
+        test_results = {
+            test_code: result for test_code, result in Non_json._load_test_results().items()
+            if mode_matches(mode, result['mode'])
+            and not (target_codes and test_code not in {code.upper() for code in target_codes})
+        }
+
         # Sort vulnerabilities by code for consistent ordering
         sorted_codes = sorted(vulnerabilities.keys())
 
-        if not sorted_codes:
+        if not sorted_codes and not test_results:
             return  # No vulnerabilities to display
 
         # Print header
         Non_json.print_box("Vulnerability Analysis")
+        for result in test_results.values():
+            label = result['label']
+            color = {1: RED, 0: GREEN}.get(label, WHITE)
+            symbol = {1: "✕", 0: "✓"}.get(label, "●")
+            ptprinthelper.ptprint(f"{color}[{symbol}]{END} {result['sentence']}", condition=True, indent=4)
+            for line in result['details']:
+                ptprinthelper.ptprint(line, condition=True, indent=8)
+            if result['table']:
+                table = tabulate(result['table']['rows'], headers=result['table']['headers'], tablefmt='grid')
+                for line in table.split('\n'):
+                    ptprinthelper.ptprint(line, condition=True, indent=8)
+        if not sorted_codes:
+            return
         ptprinthelper.ptprint(f"Legend: {RED}✕{END} = Vulnerable | {GREEN}✓{END} = Not Vulnerable | {WHITE}●{END} = N/A", condition=True, indent=4)
         ptprinthelper.ptprint("")  # Empty line for readability
 
@@ -758,6 +781,25 @@ class Non_json:
                 ptprinthelper.ptprint(line, condition=True, indent=indent + len(caption) + 8)
 
     @staticmethod
+    def _load_test_results() -> dict:
+        """Results stored by tests that report a sentence instead of the tables."""
+        try:
+            with open(get_csv_path("test_results.json"), encoding="utf-8") as handle:
+                return dict(sorted(json.load(handle).items()))
+        except (OSError, ValueError):
+            return {}
+
+    @staticmethod
+    def _own_codes() -> set[str]:
+        """Vulnerability codes of the tests in test_results.json, kept out of the tables."""
+        test_catalog = load_vuln_catalog_by_test()
+        return {
+            entry["Code"].upper()
+            for test_code in Non_json._load_test_results()
+            for entry in test_catalog.get(test_code, [])
+        }
+
+    @staticmethod
     def _print_network_findings(
         mode: str,
         vulnerability_file: str,
@@ -772,6 +814,8 @@ class Non_json:
             vuln_df = read_csv_text(vulnerability_file)
             vuln_net_df = read_csv_text(vulnerability_net_file)
 
+            own_codes = Non_json._own_codes()
+
             # Every verdict that counts towards the overall status line.
             all_vuln_results = []
 
@@ -779,6 +823,8 @@ class Non_json:
             if not has_target_filter:
                 for _, vuln_row in vuln_net_df[vuln_net_df['ID'] == "Network"].iterrows():
                     code = vuln_row.get('Code', '')
+                    if code.strip().upper() in own_codes:
+                        continue
                     if target_vuln_codes_set and code.strip().upper() not in target_vuln_codes_set:
                         continue
                     if not mode_matches(mode, vuln_row['Mode']):
@@ -796,6 +842,8 @@ class Non_json:
                         continue
                     code = vuln_row.get('Code', '')
                     if code.strip().upper() not in target_vuln_codes_set:
+                        continue
+                    if code.strip().upper() in own_codes:
                         continue
                     if target_macs_set and vuln_row.get('MAC', '').strip().upper() not in target_macs_set:
                         continue
