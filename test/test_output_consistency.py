@@ -602,7 +602,7 @@ class TestBriefResultLines:
         from ptnetinspector.output.non_json import NEGATED_PREFIXES
         from ptnetinspector.utils.vuln_catalog import load_vuln_catalog
 
-        own_tests = ("TRUNK", "4-INVENTORY", "6-INVENTORY", "LOCAL", "4-SNOOPING", "6-SNOOPING", "4-ISOLATION", "6-ISOLATION")
+        own_tests = ("TRUNK", "4-INVENTORY", "6-INVENTORY", "LOCAL", "4-SNOOPING", "6-SNOOPING", "4-ISOLATION", "6-ISOLATION", "VOICE-VLAN")
         for entry in load_vuln_catalog().values():
             if entry["Test"].upper() in own_tests:
                 continue
