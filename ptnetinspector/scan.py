@@ -364,6 +364,30 @@ class Save:
             logger.debug("Could not record joined multicast groups: %s", error)
 
     @staticmethod
+    def save_voice_frames(interface, packets):
+        """Record CDP and LLDP frames as exact bytes.
+
+        The packet timeline stores each frame as a one-line dump with whitespace
+        collapsed, which drops a byte from a binary frame that contains repeated
+        spaces and shifts every byte after it. The voice VLAN lives in a binary
+        TLV, so it is read from these untouched bytes instead.
+        """
+        try:
+            with open(get_csv_path("voice_frames.csv"), "a", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=["MAC", "Frame"])
+                for packet in packets:
+                    raw = bytes(packet)
+                    if len(raw) < 22:
+                        continue
+                    is_lldp = raw[12:14] == b"\x88\xcc"
+                    is_cdp = raw[12:14] < b"\x06\x00" and raw[17:22] == b"\x00\x00\x0c\x20\x00"
+                    if is_lldp or is_cdp:
+                        mac = ":".join(f"{byte:02x}" for byte in raw[6:12])
+                        writer.writerow({"MAC": mac, "Frame": raw.hex()})
+        except OSError as error:
+            logger.debug("Could not record voice frames: %s", error)
+
+    @staticmethod
     def save_packets(interface, ip_mode, packets):
         """
         Store all packets into CSV files and update device/address info.
@@ -1013,6 +1037,7 @@ class Run:
                 with _csv_guard():
                     Time.save_start_end(finish_time)
                     Save.save_joined_groups(interface)
+                    Save.save_voice_frames(interface, pkts)
                     Save.save_packets(interface, ip_mode, pkts)
 
             if mode == "a":

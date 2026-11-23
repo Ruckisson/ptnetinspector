@@ -6,9 +6,9 @@ import tempfile
 from pathlib import Path
 from uuid import uuid4
 
-from scapy.all import Ether
+from scapy.all import Dot3, LLC, SNAP, Ether
+from scapy.contrib.cdp import CDPv2_HDR, CDPMsgDeviceID, CDPMsgPortID, CDPMsgVoIPVLANReply
 
-from ptnetinspector.scan import Save
 from ptnetinspector.utils.cli import ptjsonlib_object
 from ptnetinspector.utils.path import get_csv_path, set_current_interface
 from ptnetinspector.vulnerability import Vulnerability
@@ -17,20 +17,6 @@ VOICE_VLAN_CODE = "PTV-NET-VOICE-VLAN-MISCONF"
 SCANNER_MAC = "aa:aa:aa:aa:aa:aa"
 SWITCH_MAC = "00:aa:bb:cc:dd:ee"
 
-# CDP frames are stored as a one-line dump with the CDP payload left as a Raw load,
-# because the capture does not load the CDP dissector. These are that stored form of a
-# Cisco CDP frame carrying a VoIP VLAN Reply of 20, and of one without it.
-CDP_VOICE_LINE = (
-    "###[ 802.3 ]### dst = 01:00:0c:cc:cc:cc src = 00:aa:bb:cc:dd:ee len = 35 ###[ LLC ]### "
-    "dsap = 0xaa ssap = 0xaa ctrl = 3 ###[ SNAP ]### OUI = Cisco Systems, Inc (00:00:0c) "
-    "code = 0x2000 ###[ Raw ]### load = b'\\x02\\xb4\\xd4\\x19\\x00\\x01\\x00\\x07SW0\\x00\\x03\\x00\\tGi0/2\\x00\\x0e\\x00\\x07\\x01\\x00\\x14'"
-)
-CDP_PLAIN_LINE = (
-    "###[ 802.3 ]### dst = 01:00:0c:cc:cc:cc src = 00:aa:bb:cc:dd:ee len = 28 ###[ LLC ]### "
-    "dsap = 0xaa ssap = 0xaa ctrl = 3 ###[ SNAP ]### OUI = Cisco Systems, Inc (00:00:0c) "
-    "code = 0x2000 ###[ Raw ]### load = b'\\x02\\xb4\\xd5B\\x00\\x01\\x00\\x07SW0\\x00\\x03\\x00\\tGi0/2'"
-)
-
 
 class SimpleIPVer:
     def __init__(self, ipv4=True, ipv6=True):
@@ -38,7 +24,14 @@ class SimpleIPVer:
         self.ipv6 = ipv6
 
 
-def _lldp_line(vlan=None, app=1):
+def _cdp_frame(vlan=None):
+    cdp = CDPv2_HDR(vers=2, ttl=180) / CDPMsgDeviceID(val=b"SW0") / CDPMsgPortID(iface=b"Gi0/2")
+    if vlan is not None:
+        cdp = cdp / CDPMsgVoIPVLANReply(status=1, vlan=vlan)
+    return bytes(Dot3(dst="01:00:0c:cc:cc:cc", src=SWITCH_MAC) / LLC(dsap=0xAA, ssap=0xAA, ctrl=3) / SNAP(OUI=0x00000C, code=0x2000) / cdp)
+
+
+def _lldp_frame(vlan=None, app=1):
     def tlv(tlv_type, body):
         length = len(body)
         return bytes([(tlv_type << 1) | ((length >> 8) & 1), length & 0xFF]) + body
@@ -48,13 +41,11 @@ def _lldp_line(vlan=None, app=1):
         policy_bits = (vlan << 9) | (5 << 6) | 46
         pdu += tlv(127, b"\x00\x12\xbb\x02" + bytes([app]) + policy_bits.to_bytes(3, "big"))
     pdu += tlv(0, b"")
-    frame = Ether(dst="01:80:c2:00:00:0e", src=SWITCH_MAC, type=0x88CC) / pdu
-    return Save.packet_to_one_line(Ether(bytes(frame)))
+    return bytes(Ether(dst="01:80:c2:00:00:0e", src=SWITCH_MAC, type=0x88CC) / pdu)
 
 
-def _run(packet_rows, ports=None, target_codes=None, smac=SCANNER_MAC):
+def _run(frames=(), ports=None, target_codes=None, smac=SCANNER_MAC):
     with tempfile.TemporaryDirectory() as tmpdir:
-        time_all = Path(tmpdir) / "time_all.csv"
         vuln_file = Path(tmpdir) / "vulnerability.csv"
         interface = f"testif-{uuid4().hex[:8]}"
         set_current_interface(interface)
@@ -66,12 +57,13 @@ def _run(packet_rows, ports=None, target_codes=None, smac=SCANNER_MAC):
         if results_file.exists():
             results_file.unlink()
 
-        time_all.parent.mkdir(parents=True, exist_ok=True)
-        with open(time_all, "w", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=["time", "MAC", "packet"])
+        frames_file = Path(get_csv_path("voice_frames.csv"))
+        frames_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(frames_file, "w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=["MAC", "Frame"])
             writer.writeheader()
-            for row in packet_rows:
-                writer.writerow(row)
+            for mac, frame in frames:
+                writer.writerow({"MAC": mac, "Frame": frame.hex()})
 
         if ports:
             ports_file = Path(get_csv_path("observed_ports.csv", interface))
@@ -92,7 +84,6 @@ def _run(packet_rows, ports=None, target_codes=None, smac=SCANNER_MAC):
             rpref=0,
             dns=[],
             target_codes=target_codes,
-            time_all_file=str(time_all),
             vulnerability_file=str(vuln_file),
         )
         vuln.store_voice_vlan_vulnerability()
@@ -108,12 +99,8 @@ def _run(packet_rows, ports=None, target_codes=None, smac=SCANNER_MAC):
         return net_rows, result, vulns
 
 
-def _packet(line, mac=SWITCH_MAC):
-    return {"time": "0", "MAC": mac, "packet": line}
-
-
 def test_voice_vlan_advertised_over_cdp_is_a_finding():
-    net_rows, result, vulns = _run([_packet(CDP_VOICE_LINE)])
+    net_rows, result, vulns = _run([(SWITCH_MAC, _cdp_frame(20))])
     assert any(r["Label"] == "1" for r in net_rows)
     assert result["label"] == 1
     assert "20" in result["sentence"] and "CDP" in result["sentence"]
@@ -121,27 +108,43 @@ def test_voice_vlan_advertised_over_cdp_is_a_finding():
 
 
 def test_voice_vlan_advertised_over_lldp_med_is_a_finding():
-    net_rows, result, vulns = _run([_packet(_lldp_line(20))])
+    net_rows, result, vulns = _run([(SWITCH_MAC, _lldp_frame(20))])
     assert any(r["Label"] == "1" for r in net_rows)
     assert "LLDP-MED" in result["sentence"]
     assert vulns == [VOICE_VLAN_CODE]
 
 
-def test_voice_vlan_signalling_app_type_is_a_finding():
-    net_rows, result, _ = _run([_packet(_lldp_line(30, app=2))])
+def test_voice_vlan_with_repeated_spaces_in_a_text_tlv_is_still_parsed():
+    # A frame whose earlier TLVs contain consecutive spaces is why exact bytes are kept.
+    def tlv(tlv_type, body):
+        length = len(body)
+        return bytes([(tlv_type << 1) | ((length >> 8) & 1), length & 0xFF]) + body
+
+    pdu = tlv(1, b"\x04\x00\x11\x22\x33\x44\x55") + tlv(2, b"\x05Gi0/2") + tlv(3, b"\x00\x78")
+    pdu += tlv(6, b"Port  33  Virtual")
+    pdu += tlv(127, b"\x00\x12\xbb\x02\x01" + ((20 << 9) | (5 << 6) | 46).to_bytes(3, "big"))
+    pdu += tlv(0, b"")
+    frame = bytes(Ether(dst="01:80:c2:00:00:0e", src=SWITCH_MAC, type=0x88CC) / pdu)
+    _, result, _ = _run([(SWITCH_MAC, frame)])
+    assert result["label"] == 1
+    assert "20" in result["sentence"]
+
+
+def test_signalling_app_type_is_a_finding():
+    _, result, _ = _run([(SWITCH_MAC, _lldp_frame(30, app=2))])
     assert result["label"] == 1
     assert "30" in result["sentence"]
 
 
 def test_cdp_without_voice_vlan_is_not_vulnerable():
-    net_rows, result, vulns = _run([_packet(CDP_PLAIN_LINE)])
+    net_rows, result, vulns = _run([(SWITCH_MAC, _cdp_frame())])
     assert any(r["Label"] == "0" for r in net_rows)
     assert result["label"] == 0
     assert vulns == []
 
 
 def test_lldp_without_voice_vlan_is_not_vulnerable():
-    _, result, _ = _run([_packet(_lldp_line())])
+    _, result, _ = _run([(SWITCH_MAC, _lldp_frame())])
     assert result["label"] == 0
 
 
@@ -161,24 +164,23 @@ def test_signalling_in_the_data_vlan_is_a_finding():
 
 
 def test_scanner_own_cdp_is_ignored():
-    _, result, _ = _run([_packet(CDP_VOICE_LINE, mac=SCANNER_MAC.upper())])
+    _, result, _ = _run([(SCANNER_MAC.upper(), _cdp_frame(20))])
     assert result["label"] == 2
 
 
-def test_corrupt_raw_load_does_not_crash():
-    corrupt = "###[ Ethernet ]### type = LLDP ###[ Raw ]### load = b'\\xzz'"
-    _, result, _ = _run([_packet(corrupt)])
-    assert result["label"] == 0
+def test_corrupt_frame_does_not_crash():
+    _, result, _ = _run([(SWITCH_MAC, b"\x00\x11")])
+    assert result["label"] == 2
 
 
 def test_json_reports_poc_only_on_a_finding():
-    _, _, vulns = _run([_packet(CDP_VOICE_LINE)])
+    _, _, vulns = _run([(SWITCH_MAC, _cdp_frame(20))])
     assert vulns == [VOICE_VLAN_CODE]
     poc = ptjsonlib_object.json_object["results"]["vulnerabilities"][0]["poc"]
     assert "voice VLAN 20" in poc
 
 
 def test_no_log_when_another_test_is_selected():
-    _, result, _ = _run([_packet(CDP_VOICE_LINE)], target_codes=["TRUNK"])
+    _, result, _ = _run([(SWITCH_MAC, _cdp_frame(20))], target_codes=["TRUNK"])
     assert result is None
     assert ptjsonlib_object.json_object["results"]["log"] == ""
