@@ -75,3 +75,4 @@
 "Network","a,a+","6","PTV-NET-6-ISOLATION-MISCONF","Network allows direct IPv6 layer 2 communication between hosts in the same VLAN","6-ISOLATION","PTL-NET-6-ISOLATION-MISCONF"
 "Network","p","","PTV-NET-VOICE-VLAN-MISCONF","Network reveals the voice VLAN to the port or carries IP telephony in the data VLAN","VOICE-VLAN","PTL-NET-VOICE-VLAN-MISCONF"
 "Network","a,a+","","PTV-NET-VOICE-VLAN-PROBE-MISCONF","Switch discloses the voice VLAN to a device claiming to be an IP phone","VOICE-VLAN-PROBE","PTL-NET-VOICE-VLAN-PROBE-MISCONF"
+"Network","p","","PTV-NET-FHRP-MISCONF","Gateway redundancy protocol runs without authentication","FHRP","PTL-NET-FHRP-MISCONF"

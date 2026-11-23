@@ -333,6 +333,7 @@ def get_help() -> list:
             ["", "      6-ISOLATION           IPv6 hosts in the same VLAN reachable directly at layer 2 (no port isolation)"],
             ["", "      VOICE-VLAN            Voice VLAN advertised to the port (CDP, LLDP-MED) or IP telephony in the data VLAN"],
             ["", "      VOICE-VLAN-PROBE      Voice VLAN disclosed to a device claiming to be an IP phone (active)"],
+            ["", "      FHRP                  HSRP, VRRP or GLBP heard without authentication (gateway takeover possible)"],
             ["", "      802-1X                Network does not have 802.1x deployed"],
             ["", "   Passive reconnaissance"],
             ["", "      4-INVENTORY           IPv4 devices and ports revealed by passive observation"],
@@ -445,6 +446,7 @@ def get_help() -> list:
             ["      ptnetinspector -ts 6-ISOLATION -i eth0"],
             ["      ptnetinspector -ts VOICE-VLAN -i eth0"],
             ["      ptnetinspector -ts VOICE-VLAN-PROBE -i eth0"],
+            ["      ptnetinspector -ts FHRP -i eth0"],
         ]}
     ]
 
