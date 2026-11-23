@@ -984,9 +984,15 @@ class Save:
         Fingerprint(mac, hop_limit, iid_type,
                     reachable_time, retrans_time, router_lft).save()
 
+_ACTIVE_PROBES = {
+    "VOICE-VLAN-PROBE": Send.send_voice_phone,
+}
+_ACTIVE_PROBE_CAPTURE = 70
+
+
 class Run:
     @staticmethod
-    def run_normal_mode(interface, mode, ip_mode, timeout, csv_lock=None):
+    def run_normal_mode(interface, mode, ip_mode, timeout, csv_lock=None, target_codes=None):
         """Run normal (passive/active/802.1x) scanning workflow.
 
         Args:
@@ -1045,6 +1051,19 @@ class Run:
                 multicast_ipv4_responder = None
                 multicast_ipv6_stop_event = None
                 multicast_ipv4_stop_event = None
+                selected_codes = {code.upper() for code in target_codes} if target_codes else set()
+                active_probes = [probe for code, probe in _ACTIVE_PROBES.items() if code in selected_codes]
+                if active_probes:
+                    probe_capture = Sniff.scan_async(interface)
+                    probe_capture.start()
+                    time.sleep(1)
+                    for probe in active_probes:
+                        probe(interface)
+                    time.sleep(timeout if timeout and timeout > 0 else _ACTIVE_PROBE_CAPTURE)
+                    probe_capture.stop()
+                    with _csv_guard():
+                        Save.save_voice_frames(interface, probe_capture.results)
+                        Save.save_packets(interface, ip_mode, probe_capture.results)
                 pkts = Sniff.scan_async(interface)
                 pkts.start()
                 time.sleep(1)
@@ -1155,7 +1174,7 @@ class Run:
                 sort_csv_role_node(interface, get_csv_path("role_node.csv", interface))
 
     @staticmethod
-    def run_aggressive_mode(interface, ip_mode, prefix_len, network, source_mac, source_ip, rpref, duration, period, chl, mtu, dns):
+    def run_aggressive_mode(interface, ip_mode, prefix_len, network, source_mac, source_ip, rpref, duration, period, chl, mtu, dns, target_codes=None):
         """Run aggressive scanning workflow (active senders + parallel capture).
 
         Spawns multiple processes to flood RA/NS/RS and concurrently run normal
@@ -1196,7 +1215,7 @@ class Run:
             target=_forked_target,
             args=(SendIPv6.react_to_NS_RS, [interface, prefix_len, network, source_mac, source_ip, rpref, chl, mtu, dns, duration]))
         active_scan = multiprocessing.Process(
-            target=_forked_target, args=(Run.run_normal_mode, [interface, "a", ip_mode, duration, csv_lock]))
+            target=_forked_target, args=(Run.run_normal_mode, [interface, "a", ip_mode, duration, csv_lock, target_codes]))
         passive_scan = multiprocessing.Process(
             target=_forked_target, args=(Run.run_normal_mode, [interface, "p", ip_mode, duration, csv_lock]))
 

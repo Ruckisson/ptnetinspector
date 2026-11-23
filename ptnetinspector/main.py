@@ -368,7 +368,7 @@ def ptnet_active():
         check_interface_status(Interface_object, interface)
         prepare_networks_file(interface, get_csv_path("networks.csv", interface))
         setup_iptables("a")
-        Run.run_normal_mode(interface, "a", ip_mode, None)
+        Run.run_normal_mode(interface, "a", ip_mode, None, target_codes=target_codes)
         handle_addresses(interface, ip_mode, check_addresses=check_addresses)
         create_vendor_csv()
         sort_all_csv(interface)
@@ -424,6 +424,7 @@ def ptnet_aggressive():
             chl,
             mtu,
             dns,
+            target_codes=target_codes,
         )
         handle_addresses(interface, ip_mode, check_addresses=check_addresses)
         create_vendor_csv()

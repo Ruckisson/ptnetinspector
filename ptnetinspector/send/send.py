@@ -7,6 +7,7 @@ are selected.
 import ipaddress
 import csv
 import socket
+import struct
 import subprocess
 import logging
 from dataclasses import dataclass
@@ -53,6 +54,58 @@ class Send:
                 interface=interface,
                 logger=logger,
                 context="send-8021x-eapol",
+                retries=3,
+                retry_delay=0.05,
+                verbose=False,
+            )
+
+    @staticmethod
+    def send_voice_phone(interface):
+        # Announce the tester as an IP phone over CDP and LLDP-MED, so a switch that
+        # discloses the voice VLAN only to a phone reveals it in its reply.
+        exist_interface = Interface(interface).check_interface()
+        if not exist_interface:
+            return
+
+        src_mac = get_if_hwaddr(interface)
+        src_bytes = bytes.fromhex(src_mac.replace(":", ""))
+
+        def cdp_checksum(data):
+            body = data[:-1] if len(data) % 2 else data
+            total = sum((body[i] << 8) | body[i + 1] for i in range(0, len(body), 2))
+            if len(data) % 2:
+                last = data[-1]
+                total += struct.unpack(">H", struct.pack(">h", last - 0x100 if last >= 0x80 else last))[0]
+            total = (total >> 16) + (total & 0xFFFF)
+            total += total >> 16
+            return (~total) & 0xFFFF
+
+        def cdp_tlv(tlv_type, body):
+            return struct.pack(">HH", tlv_type, 4 + len(body)) + body
+
+        def lldp_tlv(tlv_type, body):
+            length = len(body)
+            return bytes([(tlv_type << 1) | ((length >> 8) & 1), length & 0xFF]) + body
+
+        cdp = bytes([2, 180]) + b"\x00\x00" + cdp_tlv(1, b"SEP" + src_bytes.hex().upper().encode()) + cdp_tlv(4, struct.pack(">I", 0x10)) + cdp_tlv(6, b"Cisco IP Phone")
+        cdp = cdp[:2] + struct.pack(">H", cdp_checksum(cdp)) + cdp[4:]
+        cdp_frame = Dot3(dst="01:00:0c:cc:cc:cc", src=src_mac) / LLC(dsap=0xAA, ssap=0xAA, ctrl=3) / SNAP(OUI=0x00000C, code=0x2000) / Raw(cdp)
+
+        lldp = (
+            lldp_tlv(1, b"\x04" + src_bytes)
+            + lldp_tlv(2, b"\x03" + src_bytes)
+            + lldp_tlv(3, struct.pack(">H", 120))
+            + lldp_tlv(127, b"\x00\x12\xbb\x01" + struct.pack(">H", 0x0003) + b"\x03")
+            + lldp_tlv(0, b"")
+        )
+        lldp_frame = Ether(dst="01:80:c2:00:00:0e", src=src_mac, type=0x88CC) / Raw(lldp)
+
+        for frame in (cdp_frame, lldp_frame):
+            sendp_with_retries(
+                packets=frame,
+                interface=interface,
+                logger=logger,
+                context="send-voice-phone",
                 retries=3,
                 retry_delay=0.05,
                 verbose=False,
