@@ -77,3 +77,5 @@
 "Network","a,a+","","PTV-NET-VOICE-VLAN-PROBE-MISCONF","Switch discloses the voice VLAN to a device claiming to be an IP phone","VOICE-VLAN-PROBE","PTL-NET-VOICE-VLAN-PROBE-MISCONF"
 "Network","p","","PTV-NET-FHRP-MISCONF","Gateway redundancy protocol runs without authentication","FHRP","PTL-NET-FHRP-MISCONF"
 "Network","a","","PTV-NET-FHRP-PROBE-MISCONF","Gateway redundancy group accepts an unauthenticated higher-priority hello and can be taken over","FHRP-PROBE","PTL-NET-FHRP-PROBE-MISCONF"
+"Network","p","4","PTV-NET-4-MCAST-GROUPS-MISCONF","Sensitive IPv4 multicast streams are readable from the port","4-MCAST-GROUPS","PTL-NET-4-MCAST-GROUPS-MISCONF"
+"Network","p","6","PTV-NET-6-MCAST-GROUPS-MISCONF","Sensitive IPv6 multicast streams are readable from the port","6-MCAST-GROUPS","PTL-NET-6-MCAST-GROUPS-MISCONF"
