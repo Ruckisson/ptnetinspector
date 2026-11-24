@@ -76,3 +76,4 @@
 "Network","p","","PTV-NET-VOICE-VLAN-MISCONF","Network reveals the voice VLAN to the port or carries IP telephony in the data VLAN","VOICE-VLAN","PTL-NET-VOICE-VLAN-MISCONF"
 "Network","a,a+","","PTV-NET-VOICE-VLAN-PROBE-MISCONF","Switch discloses the voice VLAN to a device claiming to be an IP phone","VOICE-VLAN-PROBE","PTL-NET-VOICE-VLAN-PROBE-MISCONF"
 "Network","p","","PTV-NET-FHRP-MISCONF","Gateway redundancy protocol runs without authentication","FHRP","PTL-NET-FHRP-MISCONF"
+"Network","a","","PTV-NET-FHRP-PROBE-MISCONF","Gateway redundancy group accepts an unauthenticated higher-priority hello and can be taken over","FHRP-PROBE","PTL-NET-FHRP-PROBE-MISCONF"

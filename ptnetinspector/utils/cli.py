@@ -334,6 +334,7 @@ def get_help() -> list:
             ["", "      VOICE-VLAN            Voice VLAN advertised to the port (CDP, LLDP-MED) or IP telephony in the data VLAN"],
             ["", "      VOICE-VLAN-PROBE      Voice VLAN disclosed to a device claiming to be an IP phone (active)"],
             ["", "      FHRP                  HSRP, VRRP or GLBP heard without authentication (gateway takeover possible)"],
+            ["", "      FHRP-PROBE            Gateway takeover via an unauthenticated higher-priority FHRP hello (active)"],
             ["", "      802-1X                Network does not have 802.1x deployed"],
             ["", "   Passive reconnaissance"],
             ["", "      4-INVENTORY           IPv4 devices and ports revealed by passive observation"],
@@ -447,6 +448,7 @@ def get_help() -> list:
             ["      ptnetinspector -ts VOICE-VLAN -i eth0"],
             ["      ptnetinspector -ts VOICE-VLAN-PROBE -i eth0"],
             ["      ptnetinspector -ts FHRP -i eth0"],
+            ["      ptnetinspector -ts FHRP-PROBE -i eth0"],
         ]}
     ]
 

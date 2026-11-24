@@ -986,6 +986,7 @@ class Save:
 
 _ACTIVE_PROBES = {
     "VOICE-VLAN-PROBE": Send.send_voice_phone,
+    "FHRP-PROBE": Send.send_fhrp_takeover,
 }
 _ACTIVE_PROBE_CAPTURE = 70
 

