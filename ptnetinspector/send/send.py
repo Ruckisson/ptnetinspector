@@ -193,6 +193,25 @@ class Send:
             )
 
     @staticmethod
+    def send_mcast_group_join_v4(interface):
+        # Subscribe to well-known sensitive IPv4 multicast groups (SAP session
+        # announcements, PTP) so a port that may join them without a filter
+        # reveals it delivers their traffic.
+        if not Interface(interface).check_interface():
+            return
+        for group in ("224.2.127.254", "224.0.1.129", "224.0.1.130", "224.0.1.131", "224.0.1.132"):
+            SendIPv4.send_igmp_snoop_probe(interface, group)
+
+    @staticmethod
+    def send_mcast_group_join_v6(interface):
+        # Subscribe to well-known sensitive IPv6 multicast groups (PTP) so a port
+        # that may join them without a filter reveals it delivers their traffic.
+        if not Interface(interface).check_interface():
+            return
+        for group in ("ff05::181", "ff0e::181"):
+            SendIPv6.send_mld_snoop_probe(interface, group)
+
+    @staticmethod
     def send_llmnr_mdns(interface, ip_mode):
         """Send LLMNR and mDNS queries to discover hosts and addresses.
 

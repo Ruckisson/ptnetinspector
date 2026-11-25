@@ -987,6 +987,8 @@ class Save:
 _ACTIVE_PROBES = {
     "VOICE-VLAN-PROBE": Send.send_voice_phone,
     "FHRP-PROBE": Send.send_fhrp_takeover,
+    "4-MCAST-GROUPS-PROBE": Send.send_mcast_group_join_v4,
+    "6-MCAST-GROUPS-PROBE": Send.send_mcast_group_join_v6,
 }
 _ACTIVE_PROBE_CAPTURE = 70
 

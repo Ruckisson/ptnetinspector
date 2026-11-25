@@ -79,3 +79,5 @@
 "Network","a","","PTV-NET-FHRP-PROBE-MISCONF","Gateway redundancy group accepts an unauthenticated higher-priority hello and can be taken over","FHRP-PROBE","PTL-NET-FHRP-PROBE-MISCONF"
 "Network","p","4","PTV-NET-4-MCAST-GROUPS-MISCONF","Sensitive IPv4 multicast streams are readable from the port","4-MCAST-GROUPS","PTL-NET-4-MCAST-GROUPS-MISCONF"
 "Network","p","6","PTV-NET-6-MCAST-GROUPS-MISCONF","Sensitive IPv6 multicast streams are readable from the port","6-MCAST-GROUPS","PTL-NET-6-MCAST-GROUPS-MISCONF"
+"Network","a","4","PTV-NET-4-MCAST-GROUPS-PROBE-MISCONF","A device can subscribe to a sensitive IPv4 multicast group without authorization and read its traffic","4-MCAST-GROUPS-PROBE","PTL-NET-4-MCAST-GROUPS-PROBE-MISCONF"
+"Network","a","6","PTV-NET-6-MCAST-GROUPS-PROBE-MISCONF","A device can subscribe to a sensitive IPv6 multicast group without authorization and read its traffic","6-MCAST-GROUPS-PROBE","PTL-NET-6-MCAST-GROUPS-PROBE-MISCONF"
